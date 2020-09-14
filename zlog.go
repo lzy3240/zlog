@@ -141,3 +141,8 @@ func parseLevel(s string) (zapcore.Level, error) {
 		return zapcore.DebugLevel, err
 	}
 }
+
+//FormatString ...
+func (l *Log) FormatString(key, value string) zapcore.Field {
+	return zap.String(key, value)
+}
