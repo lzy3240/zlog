@@ -19,18 +19,18 @@ type Log struct {
 	SugarLogger *zap.SugaredLogger
 }
 
-// Init ...
-func Init(outputdir, perfix, level string) *Log {
+// NewLog ...
+func NewLog(outputdir, perfix, level string) *Log {
 	logLevel, err := parseLevel(level)
 	if err != nil {
 		fmt.Printf("unknown log level:[%v]\n", err)
 	}
 
 	//↓↓为分文件写日志内容的方式
-	// var infopath = perfix + "_info.log"
-	// var errorpath = perfix + "_error.log"
+	var infopath = perfix + "_info.log"
+	var errorpath = perfix + "_error.log"
 	//↓↓为单文件写日志内容的方式
-	var filename = perfix + ".log"
+	//var filename = perfix + ".log"
 
 	_, err = os.Stat(outputdir)
 	if err != nil {
@@ -62,31 +62,32 @@ func Init(outputdir, perfix, level string) *Log {
 
 	// 实现判断日志等级的interface
 	// ↓↓分文件写内容的方式
-	// infoLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-	// 	return lvl < zapcore.WarnLevel && lvl >= logLevel
-	// })
+	infoLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl < zapcore.WarnLevel && lvl >= logLevel
+	})
 
-	// warnLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
-	// 	return lvl >= zapcore.WarnLevel && lvl >= logLevel
-	// })
+	warnLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+		return lvl >= zapcore.WarnLevel && lvl >= logLevel
+	})
 	//↓↓单文件写内容的方式
-	fileLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
+	outLevel := zap.LevelEnablerFunc(func(lvl zapcore.Level) bool {
 		return lvl >= logLevel
 	})
 
 	// 获取 info、warn等日志文件的io.Writer 抽象 getWriter() 在下方实现
-	// infoHook := getWriter(outputdir, infopath)
-	// errorHook := getWriter(outputdir, errorpath)
-	fileHook := getWriter(outputdir, filename)
+	infoHook := getWriter(outputdir, infopath)
+	errorHook := getWriter(outputdir, errorpath)
+	//fileHook := getWriter(outputdir, filename)
 
 	// 最后创建具体的Logger
 	core := zapcore.NewTee(
 		//↓↓分文件写内容的方式
-		// zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(infoHook), infoLevel),  //Info以下文件输出
-		// zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(errorHook), warnLevel), //Warn以上文件输出
+		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(infoHook), infoLevel),  //Info以下文件输出
+		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(errorHook), warnLevel), //Warn以上文件输出
 		//↓↓单文件写内容的方式
-		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(fileHook), fileLevel),                               //单文件写全部日志，filelevel控制写入内容级别
-		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), fileLevel), //终端输出
+		//zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(fileHook), outLevel),                               //单文件写全部日志，filelevel控制写入内容级别
+		//↓↓控制台输出内容的方式
+		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), outLevel), //终端输出
 	)
 
 	// 需要传入 zap.AddCaller() 才会显示打日志点的文件名和行数, 有点小坑
