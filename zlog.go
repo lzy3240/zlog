@@ -23,7 +23,7 @@ type Log struct {
 func NewLog(outputdir, perfix, level string) *Log {
 	logLevel, err := parseLevel(level)
 	if err != nil {
-		fmt.Printf("unknown log level:[%v]\n", err)
+		fmt.Printf("unknown log level:[%v],set default level [DEBUG]\n", err)
 	}
 
 	//↓↓为分文件写日志内容的方式
@@ -37,7 +37,7 @@ func NewLog(outputdir, perfix, level string) *Log {
 		if os.IsNotExist(err) {
 			err := os.Mkdir(outputdir, os.ModePerm)
 			if err != nil {
-				fmt.Printf("mkdir failed![%v]\n", err)
+				fmt.Printf("mkdir failed!err:[%v]\n", err)
 			}
 		}
 	}
@@ -82,10 +82,10 @@ func NewLog(outputdir, perfix, level string) *Log {
 	// 最后创建具体的Logger
 	core := zapcore.NewTee(
 		//↓↓分文件写内容的方式
-		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(infoHook), infoLevel),  //Info以下文件输出
-		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(errorHook), warnLevel), //Warn以上文件输出
+		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(infoHook), infoLevel),  //Info及以下文件输出
+		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(errorHook), warnLevel), //Warn及以上文件输出
 		//↓↓单文件写内容的方式
-		//zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(fileHook), outLevel),                               //单文件写全部日志，filelevel控制写入内容级别
+		//zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.AddSync(fileHook), outLevel),                             //单文件写全部日志，filelevel控制写入内容级别
 		//↓↓控制台输出内容的方式
 		zapcore.NewCore(zapcore.NewConsoleEncoder(config), zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout)), outLevel), //终端输出
 	)
@@ -105,9 +105,9 @@ func NewLog(outputdir, perfix, level string) *Log {
 func getWriter(outputdir, filename string) io.Writer {
 	// 生成rotatelogs的Logger 实际生成的文件名 demo.log.YYmmddHH
 	// demo.log是指向最新日志的链接
-	// 保存7天内的日志，每1小时(整点)分割一次日志
+	// 保存7天内的日志
+	// 每日零时(整点)分割一次日志
 	hook, err := rotatelogs.New(
-		// 没有使用go风格反人类的format格式
 		outputdir+filename+".%Y%m%d",
 		rotatelogs.WithLinkName(filename),
 		rotatelogs.WithMaxAge(time.Hour*24*7),
@@ -120,7 +120,7 @@ func getWriter(outputdir, filename string) io.Writer {
 }
 
 func parseLevel(s string) (zapcore.Level, error) {
-	//格式化Log级别参数
+	//格式化loglevel参数
 	s = strings.ToLower(s)
 	switch s {
 	case "debug":
@@ -145,5 +145,6 @@ func parseLevel(s string) (zapcore.Level, error) {
 
 //FormatString ...
 func (l *Log) FormatString(key, value string) zapcore.Field {
+	//格式化字符串为json，为减少引用
 	return zap.String(key, value)
 }
